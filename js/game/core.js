@@ -25,6 +25,12 @@ function _must_set(vrbl, message, type) {
 function Scene(graph) {
     this.graph = _default(graph, []);
 
+    this.add_node = (function (node) {
+        _must_set(node, "Tried to add unset node to Scene object.");
+
+        this.graph.append(node);
+    });
+
     this.iterate = (function (pane) {
         for (var i=0; i < graph.length; i++) {
             graph[i].march();
@@ -59,12 +65,12 @@ function StateSet() {
     });
 }
 
-function BitmapSprite(state_set, state) {
+function BitmapSprite(state_set, current_state) {
     _must_set(state_set, "Sprite initialized without frame object.");
-    _must_set(state, "Sprite initialized without known state.");
+    _must_set(current_state, "Sprite initialized without known state.");
 
     this.state_set = state_set;
-    this.state = state;
+    this.state = current_state;
 
     this.x = 0;
     this.y = 0;
@@ -88,16 +94,48 @@ function Game(pane, frame_rate) {
     // Canvas context to which we are rendering
     this.pane = pane;
 
+    this.scene = new Scene();
+
+    this.add_sprite = (function (sprite) {
+        _must_set(sprite, "Tried to add unset sprite to game.");
+
+        this.scene.add_node(sprite);
+    });
+
     // Step game forward by one iteration
     this.iterate = (function () {
         this.scene.iterate(this.pane);
+    });
+
+    this.run = false;
+
+    this.loop = (function () {
+        this.run = true;
+
+        while this.run {
+            this.iterate();
+            time.sleep(this.frame_rate);
+        }
     });
 }
 
 /*** Interface With Actual Page **********************************************/
 
 function setup() {
-    
+    canvas = document.getElementById('main_pane');
+    context = canvas.getContext('2d');
+
+    var game = new Game(context, 1000/30);
+
+    var txtr = new Image();
+    txtr.url = "./apple-touch-icon.png"
+    var frames = new FrameSet([txtr]);
+    var states = new StateSet();
+    states.add_state("cruising", frames);
+    var roamer = new BitmapSprite(states, "cruising");
+
+    game.add_sprite(roamer);
+    game.loop();
 }
 
-setup();
+$.ready(setup());
